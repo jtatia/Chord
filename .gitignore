@@ -3,3 +3,12 @@
 *.ipr
 *.iws
 .idea/
+
+### Java ###
+*.class
+
+# Java Package Files #
+*.jar
+*.war
+*.ear
+############
