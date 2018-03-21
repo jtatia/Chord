@@ -5,9 +5,11 @@ public class ChordConstants {
 
     public static final String GET_PREDECESSOR = "GETPRED_";
 
+    public static final String GET_SUCCESSOR = "GETSUCC_";
+
     public static final String GRACEFUL_EXIT = "GRACEFULEXIT_";
 
-    public static final String GRACEFUL_TRANSFER = "GRACEFULTRANSER_";
+    public static final String GRACEFUL_TRANSFER = "GRACEFULTRANSFER_";
 
     public static final String I_AM_PREDECESSOR = "IAMPRE_";
 

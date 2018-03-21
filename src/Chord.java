@@ -65,6 +65,7 @@ public class Chord {
                 case 6:
                     node.gracefulExit();
                     System.out.println("Exiting.....");
+                    System.exit(1);
                     return;
                 default:
                     System.out.println("Not Valid");

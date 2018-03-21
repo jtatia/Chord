@@ -47,14 +47,21 @@ public class Node {
         }
         predecessor = localAddress;
 
+        //Create Directory
+
+        String fileCreateList = "";
+
         for (int i=1;i<=100;i++){
             String filename = "file"+i;
+            fileCreateList+=filename+"$";
             int mapId = Helper.getIdFromName(filename);
             if (files.containsKey(mapId)){
                 files.get(mapId).add(filename);
             }
             else files.put(mapId,new ArrayList<>(Arrays.asList(filename)));
         }
+
+        createFiles(fileCreateList);
 
         this.listener = new Listener(this);
    //     this.stabilize = new Stabilize(this);
@@ -74,7 +81,7 @@ public class Node {
         }
 
         String fileList = Helper.requestResponseHandler(
-                findLocalSuccessor().getAddress(),"GETFILES_"+id+"_"+Helper.getIdFromAddress(predecessor));
+                findLocalSuccessor().getAddress(),ChordConstants.GETFILES+id+"_"+Helper.getIdFromAddress(predecessor));
               createFiles(fileList);
 
             this.listener = new Listener(this);
@@ -84,22 +91,23 @@ public class Node {
     }
 
     public boolean createFiles(String filesList){
+        File dir = new File(path);
+        // attempt to create the directory here
+        if(!dir.isDirectory()){
+            dir.mkdir();
+        }
         if (filesList.length()==0)
             return false;
         String array[] = filesList.split("\\$");
         for (String s : array){
             int mapId = Helper.getIdFromName(s);
             if (files.containsKey(mapId)){
+                if (!files.get(mapId).contains(s))
                 files.get(mapId).add(s);
             }
             else files.put(mapId,new ArrayList<>(Arrays.asList(s)));
         }
 
-        File dir = new File(path);
-        // attempt to create the directory here
-        if(!dir.isDirectory()){
-            dir.mkdir();
-        }
 
 
         for (String x: array){
@@ -116,7 +124,7 @@ public class Node {
     public void notify(InetSocketAddress successor) {
         Ipbind ipbind = new Ipbind(id,localAddress);
         if (successor != null && !successor.equals(localAddress))
-            Helper.requestResponseHandler(successor, "IAMPRE_" + ipbind.toString());
+            Helper.requestResponseHandler(successor, ChordConstants.I_AM_PREDECESSOR + ipbind.toString());
         }
 
     public void notified (String newpre) {
@@ -135,12 +143,12 @@ public class Node {
 
     public void initFingerTable(InetSocketAddress contact){
         InetSocketAddress successor = Helper.getInetSocketAddressFromResponse(
-                Helper.requestResponseHandler(contact,"FINDSUCC_"+(id+1)%32));
+                Helper.requestResponseHandler(contact,ChordConstants.FIND_SUCCESSOR+(id+1)%32));
         fingerTable.put(0,new Ipbind(Helper.getIdFromAddress(successor),successor));
         predecessor = Helper.getInetSocketAddressFromResponse(
                 Helper.requestResponseHandler(this.findLocalSuccessor().getAddress(),ChordConstants.GET_PREDECESSOR));
         Ipbind cur = new Ipbind(id,localAddress);
-        Helper.requestResponseHandler(this.findLocalSuccessor().getAddress(),"SETPRED_"+cur.toString());
+        Helper.requestResponseHandler(this.findLocalSuccessor().getAddress(),ChordConstants.SET_PREDECESSOR+cur.toString());
         for(int i=2;i<=range;i++){
             int id = ((this.id+(1<<(i-1)))%(32));
             int query_id_relative = Helper.calculateRelativeId(id,this.id);
@@ -148,7 +156,7 @@ public class Node {
             if(query_id_relative<=last_finger_relative){
                 fingerTable.put(i-1,fingerTable.get(i-2));
             }else{
-                String fingerEntry = Helper.requestResponseHandler(contact,"FINDSUCC_"+id);
+                String fingerEntry = Helper.requestResponseHandler(contact,ChordConstants.FIND_SUCCESSOR+id);
                 fingerTable.put(i-1,new Ipbind(fingerEntry));
             }
         }
@@ -156,7 +164,7 @@ public class Node {
 
     public Ipbind findSuccessor(int id){
         Ipbind n = this.findPredecesor(id);
-        Ipbind s = new Ipbind(Helper.requestResponseHandler(n.getAddress(),"GETSUCC_"));
+        Ipbind s = new Ipbind(Helper.requestResponseHandler(n.getAddress(),ChordConstants.GET_SUCCESSOR));
         //System.out.println("Successor Returned : "+s.toString());
         return s;
     }
@@ -170,7 +178,7 @@ public class Node {
             return d;
         }
         InetSocketAddress broadcastNode = closestPrecedingFinger(id);
-        String broadcastIp = Helper.requestResponseHandler(broadcastNode,"FINDPRED_"+id);
+        String broadcastIp = Helper.requestResponseHandler(broadcastNode,ChordConstants.FIND_PREDECESSOR+id);
         Ipbind result = null;
         try{
             result = new Ipbind(broadcastIp);
@@ -204,7 +212,7 @@ public class Node {
             Ipbind pSucc = null;
             if (!p.getAddress().equals(this.getLocalAddress()))
             {
-                pSucc = new Ipbind(Helper.requestResponseHandler(p.getAddress(),"GETSUCC_1"));
+                pSucc = new Ipbind(Helper.requestResponseHandler(p.getAddress(),ChordConstants.GET_SUCCESSOR));
             }
             else
                 pSucc = this.findLocalSuccessor();
@@ -212,7 +220,7 @@ public class Node {
                 p=pSucc;
             if(!p.getAddress().equals(localAddress)) {
                 Ipbind local= new Ipbind(id,localAddress);
-                Helper.requestResponseHandler(p.getAddress(), "UPD_" + local.toString() + "_" + i);
+                Helper.requestResponseHandler(p.getAddress(), ChordConstants.UPDATE + local.toString() + "_" + i);
             }
         }
         return true;
@@ -225,7 +233,7 @@ public class Node {
             InetSocketAddress predecessorNode = predecessor;
             if(!p.getAddress().equals(predecessor)) {
              Ipbind pred = new Ipbind(Helper.getIdFromAddress(predecessor),predecessor);
-                Helper.requestResponseHandler(predecessorNode, "UPD_" + pred.toString() + "_" + i);
+                Helper.requestResponseHandler(predecessorNode, ChordConstants.UPDATE + pred.toString() + "_" + i);
             }
         }
     }
@@ -234,6 +242,9 @@ public class Node {
         Helper.requestResponseHandler(predecessor,ChordConstants.GRACEFUL_EXIT+findLocalSuccessor().toString());
         String files = Helper.sendFiles(Helper.getIdFromAddress(predecessor),id,this);
         Helper.requestResponseHandler(findLocalSuccessor().getAddress(),ChordConstants.GRACEFUL_TRANSFER+files);
+        File dir = new File(path);
+        if (dir.isDirectory())
+            dir.delete();
      }
 
 
@@ -309,7 +320,7 @@ public class Node {
         System.out.println("START\tRANGE\tFINGER");
         for(int i=0;i<5;i++){
             System.out.println((id+(int)Math.pow(2,i))%32+"\t("+(id+(int)Math.pow(2,i))%32+
-                   ", "+  (id+(int)Math.pow(2,i+1))%32+" )\t\t"+fingerTable.get(i).getId());
+                   ","+  (id+(int)Math.pow(2,i+1))%32+")\t\t"+fingerTable.get(i).getId());
         }
     }
 
@@ -337,4 +348,44 @@ public class Node {
     public void setFiles(HashMap<Integer, ArrayList<String>> files) {
         this.files = files;
     }
+
+    public String getPath() {
+        return path;
+    }
+
+    public void setPath(String path) {
+        this.path = path;
+    }
 }
+
+
+/**
+ * IP=172.16.187.41
+ * ports = 1234 -- 16/
+ *         6565 -- 2/
+ *         2133 -- 30
+ *         9007 -- 4
+ *         1111--6
+ *         1112--3/
+ *         1113-25
+ *         1114-1
+ *         1137-24
+ *         2335-20
+ */
+
+/**
+ * IP=172.16.146.98
+ * ports = 1234 16
+ *         6565 2
+ *         2133 30
+ *         9007 4
+ *         1111 6
+ *         1112 3
+ *         1113 25
+ *         1114 1
+ *         1137 24
+ *         2335 20
+ *
+ *
+ *
+ * */

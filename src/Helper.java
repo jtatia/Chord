@@ -94,7 +94,6 @@ Defining Global Factory Methods
 
     }
 
-
     private static int convertToValue(String mess) {
         int res = 1;
         for (int i = 0; i < mess.length(); i++) {
@@ -129,19 +128,26 @@ public static InetSocketAddress getInetSocketAddressFromResponse(String suc){
         for (int k:keys){
             if (pId<nId && (k>pId && k<=nId)) {
                 ArrayList<String> arr = localNode.getFiles().get(k);
-                for (String x : arr)
+                for (String x : arr) {
                     flist += x + "$";
+                    File f = new File(localNode.getPath()+"/"+x);
+                    f.delete();
+                }
                 keysList.add(k);
             }
             else if (pId>nId && (k>pId && k<=nId)){
                 ArrayList<String> arr = localNode.getFiles().get(k);
-                for (String x:arr)
-                    flist+=x+"$";
+                for (String x:arr) {
+                    flist += x + "$";
+                    File f = new File(localNode.getPath()+"/"+x);
+                    f.delete();
+                }
             keysList.add(k);
             }
         }
-        for (int k:keysList)
+        for (int k:keysList) {
             localNode.getFiles().remove(k);
+        }
         return flist;
     }
 }

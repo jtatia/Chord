@@ -76,11 +76,12 @@ public class Client implements Runnable {
             case "GRACEFULEXIT":
                 Ipbind newSuccessor = new Ipbind(request);
                 localNode.updateIthFingerEntry(0,newSuccessor);
+                if (localNode.getLocalAddress().equals(localNode.findLocalSuccessor().getAddress()))
+                    localNode.setPredecessor(localNode.getLocalAddress());
                 break;
-            case "GRACEFUL_TRANSFER":
+            case "GRACEFULTRANSFER":
                 localNode.createFiles(request);
                 break;
-
         }
 
         return response;
